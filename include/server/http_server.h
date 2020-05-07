@@ -27,7 +27,7 @@ namespace spiritsaway::http_redis
 		std::string channel;
 		std::string check_request() override;
 		void route_request() override;
-		void finish_task(const std::string& error, const std::vector<std::string>& content, bool is_array);
+		void finish_task(const std::vector<reply>& replys);
 		std::shared_ptr<task::callback_t> callback;
 		std::shared_ptr<boost::asio::steady_timer> expire_timer;
 		void on_timeout(const boost::system::error_code& e);

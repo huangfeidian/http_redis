@@ -92,23 +92,31 @@ void worker::poll()
 			}
 			continue;
 		}
+		logger->debug("get task {}", cur_task->request_id());
 		pre_channel = cur_task->channel_id();
 		for (auto one_cmd : cur_task->cmds())
 		{
 			redisAppendCommand(ctx, one_cmd.c_str());
 		}
-		redisReply *reply;
-		 redisGetReply(ctx, reinterpret_cast<void**>(&reply));
-		if (!reply)
+		redisReply *raw_reply;
+		std::vector<reply> result;
+		for(int i = 0; i < cur_task->cmds().size(); i++)
 		{
-			cur_task->finish("empty reply", {}, false);
-			return;
+			raw_reply = nullptr;
+			redisGetReply(ctx, reinterpret_cast<void**>(&raw_reply));
+			if (!raw_reply)
+			{
+				break;
+			}
+			else
+			{
+				result.push_back(handle_reply(*raw_reply));
+				freeReplyObject(raw_reply);
+				raw_reply = nullptr;
+			}
 		}
-		else
-		{
-			handle_reply(*reply, cur_task);
-			freeReplyObject(reply);
-		}
+		cur_task->finish(result);
+		_task_source.finish_task(cur_task);
 
 	}
 }
@@ -116,12 +124,42 @@ void worker::poll()
 bool worker::ping()
 {
 	redisReply *reply = static_cast<redisReply *>(redisCommand(ctx, "PING"));
-	bool bRet = (NULL != reply) && (reply->str) && (std::strncmp(reply->str, "PONG", 4) == 0);
-	if (reply)
+	std::string error = "";
+	bool ping_ret = false;
+	if (!reply)
 	{
-		freeReplyObject(reply);
+		error = "no reply";
+		ping_ret = false;
 	}
-	return bRet;
+	else
+	{
+		if (!reply->str)
+		{
+			error = "reply is not str";
+			ping_ret = false;
+		}
+		else
+		{
+			auto cur_reply_str = std::string(reply->str, reply->len);
+			if (std::strncmp(cur_reply_str.c_str(), "PONG", 4) != 0)
+			{
+				error = "reply is " + cur_reply_str + " not PONG ";
+				ping_ret = false;
+			}
+			else
+			{
+				ping_ret = true;
+			}
+			freeReplyObject(reply);
+
+		}
+	}
+
+	if (!ping_ret)
+	{
+		logger->info("ping {}:{} with fail error {}", _config.host, _config.port, error);
+	}
+	return ping_ret;
 }
 
 void worker::init_ctx()
@@ -148,28 +186,28 @@ void worker::init_ctx()
 	}
 }
 
-void worker::handle_reply(const redisReply& cur_reply, std::shared_ptr<task> task)
+reply worker::handle_reply(const redisReply& cur_reply)
 {
-	std::vector<std::string> contents;
-	std::string err_str;
-	bool is_array = false;
+	reply result_reply;
+	result_reply.is_array = false;
+
 	switch (cur_reply.type)
 	{
 	case REDIS_REPLY_ERROR:
 	{
 		if (cur_reply.str == nullptr)
 		{
-			err_str = "invalid reply str";
+			result_reply.error = "invalid reply str";
 		}
 		else
 		{
-			err_str = std::string(cur_reply.str, cur_reply.len);
+			result_reply.error = std::string(cur_reply.str, cur_reply.len);
 		}
 		break;
 	}
 	case REDIS_REPLY_NIL:
 	{
-		contents.push_back("");
+		result_reply.content.push_back("");
 		break;
 	}
 	case REDIS_REPLY_STRING:
@@ -184,18 +222,18 @@ void worker::handle_reply(const redisReply& cur_reply, std::shared_ptr<task> tas
 		{
 			reply_str = std::string(cur_reply.str, cur_reply.len);
 		}
-		contents.push_back(reply_str);
+		result_reply.content.push_back(reply_str);
 		break;
 	}
 	case REDIS_REPLY_INTEGER:
 	{
-		contents.push_back(std::to_string(cur_reply.integer));
+		result_reply.content.push_back(std::to_string(cur_reply.integer));
 		break;
 	}
 	case REDIS_REPLY_ARRAY:
 	{
 		std::vector<std::string> contents;
-		is_array = true;
+		result_reply.is_array = true;
 		if (cur_reply.element != nullptr)
 		{
 			for (std::size_t idx = 0; idx != cur_reply.elements; idx++)
@@ -208,10 +246,9 @@ void worker::handle_reply(const redisReply& cur_reply, std::shared_ptr<task> tas
 		break;
 	}
 	default:
-		err_str = "unknown reply type";
+		result_reply.error = "unknown reply type";
 	}
-	task->finish(err_str, contents, is_array);
-	_task_source.finish_task(task);
+	return result_reply;
 }
 
 worker::~worker()

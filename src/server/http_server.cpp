@@ -1,5 +1,6 @@
 ﻿#include <server/http_server.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/fmt/ostr.h>
 using namespace spiritsaway;
 
 
@@ -76,13 +77,15 @@ std::string redis_session::check_request()
 }
 void redis_session::route_request()
 {
+	logger->debug("redis_session accept new request {} body {}", request_id, req_.body());
+
 	auto self = std::dynamic_pointer_cast<redis_session>(shared_from_this());
-	auto cur_task_lambda = [=](const std::string& error, const std::vector<std::string>& content, bool is_array)
+	auto cur_task_lambda = [=](const std::vector<reply>& replys)
 	{
-		return self->finish_task(error, content, is_array);
+		return self->finish_task(replys);
 	};
 	callback = std::make_shared<task::callback_t>(cur_task_lambda);
-	auto cur_task = std::make_shared<task>(channel, redis_cmds, callback);
+	auto cur_task = std::make_shared<task>(channel, redis_cmds, request_id, callback);
 	beast::get_lowest_layer(stream_).expires_after(
 		std::chrono::seconds(expire_time));
 	expire_timer = std::make_shared<boost::asio::steady_timer>(stream_.get_executor(), std::chrono::seconds(expire_time / 2));
@@ -104,33 +107,40 @@ void redis_session::on_timeout(const boost::system::error_code& e)
 	do_write(http_utils::common::create_response::bad_request("timeout", req_));
 }
 
-void redis_session::finish_task(const std::string& error, const std::vector<std::string>& content, bool is_array)
+void redis_session::finish_task(const std::vector<reply>& replys)
 {
 	expire_timer.reset();
 	callback.reset();
 	json result;
-	if (!error.empty())
+	for (const auto& one_reply : replys)
 	{
-		result["error"] = error;
-	}
-	else
-	{
-		if (is_array)
+		json one_result;
+		if (!one_reply.error.empty())
 		{
-			result["content"] = content;
+			one_result["error"] = one_reply.error;
+			logger->info("process {} with error {}", req_.body(), one_reply.error);
 		}
 		else
 		{
-			if (!content.empty())
+			if (one_reply.is_array)
 			{
-				result["content"] = content[0];
+				one_result["content"] = one_reply.content;
 			}
 			else
 			{
-				result["error"] = "empty content";
+				if (!one_reply.content.empty())
+				{
+					one_result["content"] = one_reply.content[0];
+				}
+				else
+				{
+					one_result["error"] = "empty content";
+				}
 			}
 		}
+		result.push_back(one_result);
 	}
+	logger->debug("finish task {}", request_id);
 	http::response<http::string_body> res{ http::status::ok, req_.version() };
 	res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
 	res.set(http::field::content_type, "text/html");

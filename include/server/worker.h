@@ -43,7 +43,7 @@ namespace spiritsaway::http_redis
 		void poll();
 		bool ping();
 		void init_ctx();
-		void handle_reply(const redisReply& cur_reply, std::shared_ptr<task> task);
+		reply handle_reply(const redisReply& cur_reply);
 	public:
 		virtual ~worker();
 	};
