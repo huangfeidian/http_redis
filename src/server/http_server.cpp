@@ -29,6 +29,7 @@ std::string redis_session::check_request()
 	}
 	if (!json::accept(req_.body()))
 	{
+		logger->info("request is {}", req_);
 		return "body must be json";
 	}
 	auto json_body = json::parse(req_.body());
@@ -111,7 +112,7 @@ void redis_session::finish_task(const std::vector<reply>& replys)
 {
 	expire_timer.reset();
 	callback.reset();
-	json result;
+	json::array_t array_result;
 	for (const auto& one_reply : replys)
 	{
 		json one_result;
@@ -124,13 +125,20 @@ void redis_session::finish_task(const std::vector<reply>& replys)
 		{
 			if (one_reply.is_array)
 			{
-				one_result["content"] = one_reply.content;
+				one_result["content"] = json(one_reply.content);
+				//for (auto one_str : one_reply.content)
+				//{
+				//	logger->info("content is {}", one_str);
+
+				//}
 			}
 			else
 			{
 				if (!one_reply.content.empty())
 				{
 					one_result["content"] = one_reply.content[0];
+					//logger->info("content is {}", one_reply.content[0]);
+
 				}
 				else
 				{
@@ -138,14 +146,15 @@ void redis_session::finish_task(const std::vector<reply>& replys)
 				}
 			}
 		}
-		result.push_back(one_result);
+		array_result.push_back(one_result);
 	}
+	json final_result = json(array_result);
 	logger->debug("finish task {}", request_id);
 	http::response<http::string_body> res{ http::status::ok, req_.version() };
 	res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
 	res.set(http::field::content_type, "text/html");
 	res.keep_alive(req_.keep_alive());
-	res.body() = result.dump();
+	res.body() = final_result.dump();
 	res.prepare_payload();
 	do_write(std::move(res));
 }

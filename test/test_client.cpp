@@ -80,7 +80,7 @@ std::vector<std::string> create_set_cmds()
 
 void make_request(net::io_context& ioc, logger_t cur_logger,
 	const std::string& host, const std::uint16_t& port, const std::uint32_t& expire_time, 
-	std::uint32_t& next_cmd_idx, const std::vector<std::string>& cmds)
+	std::uint32_t& next_cmd_idx, const std::vector<std::string>& cmds, std::shared_ptr< http_utils::common::callback_t>& pre_callback)
 {
 	if (next_cmd_idx >= cmds.size())
 	{
@@ -98,16 +98,18 @@ void make_request(net::io_context& ioc, logger_t cur_logger,
 	temp_vec.push_back(cmds[next_cmd_idx]);
 	body["redis_cmds"] = temp_vec;
 	body["channel"] = "redis_request_one";
-	auto result_lambda = [&](http_utils::common::error_pos ec, const http::response<http::string_body>& response) mutable
+	cur_request.data = body.dump();
+	auto result_lambda = [&, cur_logger](http_utils::common::error_pos ec, const http::response<http::string_body>& response) mutable
 	{
 		if (ec != http_utils::common::error_pos::ok)
 		{
 			cur_logger->info("request error {}", magic_enum::enum_name(ec));
 		}
 		cur_logger->info("cmd {} reply {}", cmds[next_cmd_idx - 1], response.body());
-		make_request(ioc, cur_logger, host, port, expire_time, next_cmd_idx, cmds);
+		make_request(ioc, cur_logger, host, port, expire_time, next_cmd_idx, cmds, pre_callback);
 	};
 	auto cur_callback = std::make_shared<http_utils::common::callback_t>(result_lambda);
+	pre_callback = cur_callback;
 	auto cur_session = std::make_shared<http_utils::client::session>(ioc, cur_request, cur_logger, cur_callback, expire_time);
 
 	cur_logger->info("make request index {} content {}", next_cmd_idx, cmds[next_cmd_idx]);
@@ -118,14 +120,20 @@ void make_request(net::io_context& ioc, logger_t cur_logger,
 int main(int argc, const char** argv)
 {
 	std::string argv_info = "args format: host port expire_time";
-	if (argc != 4)
-	{
-		std::cout << argv_info << std::endl;
-		return 0;
-	}
-	std::string host = std::string(argv[1]);
-	std::uint16_t port = std::stoi(argv[2]);
-	std::uint32_t expire_time = std::stoi(argv[3]);
+	//if (argc != 4)
+	//{
+	//	std::cout << argv_info << std::endl;
+	//	return 0;
+	//}
+	std::string host;
+	std::uint16_t port;
+	std::uint32_t expire_time;
+	//host = std::string(argv[1]);
+	//port = std::stoi(argv[2]);
+	//expire_time = std::stoi(argv[3]);
+	host = "127.0.0.1";
+	port = 8080;
+	expire_time = 10;
 	std::vector<std::string> detail_cmds;
 	std::vector<std::vector<std::string>> batch_cmds;
 	std::vector<std::string> temp_cmds;
@@ -152,9 +160,9 @@ int main(int argc, const char** argv)
 
 	net::io_context ioc;
 	auto cur_logger = create_logger("redis_client");
-
+	std::shared_ptr< http_utils::common::callback_t> client_callback;
 	std::uint32_t next_cmd_idx = 0;
-	make_request(ioc, cur_logger, host, port, expire_time, next_cmd_idx, detail_cmds);
+	make_request(ioc, cur_logger, host, port, expire_time, next_cmd_idx, detail_cmds, client_callback);
 	ioc.run();
 
 }

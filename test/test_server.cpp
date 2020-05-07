@@ -14,11 +14,12 @@ std::shared_ptr<spdlog::logger> create_logger(const std::string& name)
 {
 	auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 	console_sink->set_level(spdlog::level::debug);
-	std::string pattern = "[thread %t] [%H:%M:%S %z][" + name + "] [%^%l%$]  %v";
+	std::string pattern = "[thread %t] %+";
 	console_sink->set_pattern(pattern);
 
 	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(name + ".log", true);
 	file_sink->set_level(spdlog::level::trace);
+	file_sink->set_pattern(pattern);
 	auto logger = std::make_shared<spdlog::logger>(name, spdlog::sinks_init_list{ console_sink, file_sink });
 	logger->set_level(spdlog::level::trace);
 	return logger;

@@ -232,17 +232,18 @@ reply worker::handle_reply(const redisReply& cur_reply)
 	}
 	case REDIS_REPLY_ARRAY:
 	{
-		std::vector<std::string> contents;
+		
 		result_reply.is_array = true;
 		if (cur_reply.element != nullptr)
 		{
 			for (std::size_t idx = 0; idx != cur_reply.elements; idx++)
 			{
 				auto cur_sub_reply_ptr = cur_reply.element[idx];
-				contents.push_back(std::string(cur_sub_reply_ptr->str, cur_sub_reply_ptr->len));
+				result_reply.content.push_back(std::string(cur_sub_reply_ptr->str, cur_sub_reply_ptr->len));
 
 			}
 		}
+
 		break;
 	}
 	default:
