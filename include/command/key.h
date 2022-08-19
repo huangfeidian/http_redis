@@ -11,15 +11,15 @@ namespace spiritsaway::http_redis::command
 
 	enum class set_mode
 	{
-		default,
-		nx,
-		xx,
+		set_default,
+		set_nx,
+		set_xx,
 	};
 
 	class key
 	{
 	public:
-		static std::string set(const std::string& key, const std::string& value, std::uint32_t ttl_miliseconds = 0, set_mode mode = set_mode::default);
+		static std::string set(const std::string& key, const std::string& value, std::uint32_t ttl_miliseconds = 0, set_mode mode = set_mode::set_default);
 		static std::string set(const std::vector<std::pair<std::string, std::string>>& kvs, bool nx_flag = false);
 		static std::string set(const std::unordered_map<std::string, std::string>& kvs, bool nx_flag = false);
 		

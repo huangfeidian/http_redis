@@ -13,10 +13,10 @@ std::string key::set(const std::string& key, const std::string& value, std::uint
 	}
 	switch (mode)
 	{
-	case set_mode::nx:
+	case set_mode::set_nx:
 		result.push_back("NX");
 		break;
-	case set_mode::xx:
+	case set_mode::set_xx:
 		result.push_back("XX");
 		break;			
 	default:
