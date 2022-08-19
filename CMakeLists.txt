@@ -57,16 +57,16 @@ add_definitions (-DBOOST_ASIO_DISABLE_BOOST_REGEX=1)
 file(GLOB_RECURSE COMMAND_SRC_FILES "${PROJECT_SOURCE_DIR}/src/command/*.cpp")
 file(GLOB_RECURSE SERVER_SRC_FILES "${PROJECT_SOURCE_DIR}/src/server/*.cpp")
 
-add_library(command ${COMMAND_SRC_FILES})
+add_library(http_redis_command ${COMMAND_SRC_FILES})
 
-add_library(server ${SERVER_SRC_FILES})
-target_link_libraries(server PUBLIC http_utils nlohmann_json::nlohmann_json task_channel hiredis::hiredis)
+add_library(http_redis_server ${SERVER_SRC_FILES})
+target_link_libraries(http_redis_server PUBLIC http_utils nlohmann_json::nlohmann_json task_channel hiredis::hiredis)
 
 add_executable(server_test ${PROJECT_SOURCE_DIR}/test/test_server.cpp)
-target_link_libraries(server_test server)
+target_link_libraries(server_test http_redis_server)
 
 add_executable(client_test ${PROJECT_SOURCE_DIR}/test/test_client.cpp)
-target_link_libraries(client_test http_utils nlohmann_json::nlohmann_json command)
+target_link_libraries(client_test http_utils nlohmann_json::nlohmann_json http_redis_command)
 
 foreach(p LIB BIN INCLUDE)
 	set(var CMAKE_INSTALL_${p}DIR)
@@ -76,7 +76,7 @@ foreach(p LIB BIN INCLUDE)
 	endif()
 endforeach()
 
-export(TARGETS command server 
+export(TARGETS http_redis_command http_redis_server 
      FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Targets.cmake)
 
 file(WRITE
@@ -87,7 +87,7 @@ install(FILES
         ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
 
-install(TARGETS command server EXPORT ${PROJECT_NAME}Targets
+install(TARGETS http_redis_command http_redis_server EXPORT ${PROJECT_NAME}Targets
    ARCHIVE  DESTINATION lib
    LIBRARY DESTINATION lib
    RUNTIME DESTINATION bin

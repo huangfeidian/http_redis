@@ -1,6 +1,6 @@
 ﻿#include <server/worker.h>
 #ifdef _MSC_VER
-#include <winsock.h>
+#include <winsock2.h>
 #endif
 using namespace spiritsaway;
 
