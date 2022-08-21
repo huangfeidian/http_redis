@@ -85,6 +85,10 @@ void worker::poll()
 		auto cur_task = _task_source.poll_one_task(pre_channel, worker_id);
 		if (!cur_task)
 		{
+			if(m_stopped)
+			{
+				return;
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			if (!ping())
 			{
@@ -259,4 +263,9 @@ worker::~worker()
 		redisFree(ctx);
 		ctx = nullptr;
 	}
+}
+
+void worker::notify_stop()
+{
+	m_stopped = true;
 }
