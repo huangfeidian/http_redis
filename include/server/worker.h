@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
+#include <nlohmann/json.hpp>
 
 #include "task.h"
 
@@ -21,6 +22,7 @@ namespace spiritsaway::http_redis
 		std::uint16_t port;
 		std::uint32_t timeout;
 		std::string passwd;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(redis_config, host, port,  passwd, timeout)
 	};
 	class worker
 	{
