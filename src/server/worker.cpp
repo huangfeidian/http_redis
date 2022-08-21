@@ -6,7 +6,7 @@ using namespace spiritsaway;
 
 using namespace spiritsaway::http_redis;
 worker::worker(const redis_config& config, 
-	concurrency::task_channels<task>& task_source, 
+	concurrency::task_channels<task, true>& task_source, 
 	logger_t in_logger)
 	: _config(config)
 	, _task_source(task_source)

@@ -21,7 +21,7 @@ namespace spiritsaway::http_redis
 
 	class redis_session: public http_utils::server::session
 	{
-		concurrency::task_channels<task>& _task_dest;
+		concurrency::task_channels<task, true>& _task_dest;
 		std::string request_id;
 		std::vector<std::string> redis_cmds;
 		std::string channel;
@@ -36,21 +36,21 @@ namespace spiritsaway::http_redis
 		redis_session(tcp::socket&& socket,
 			logger_t in_logger,
 			std::uint32_t in_expire_time,
-			concurrency::task_channels<task>& in_task_dest);
+			concurrency::task_channels<task, true>& in_task_dest);
 
 	};
 
 	class redis_listener : public http_utils::server::listener
 	{
 	protected:
-		concurrency::task_channels<task>& _task_dest;
+		concurrency::task_channels<task, true>& _task_dest;
 
 	public:
 		redis_listener(net::io_context& ioc,
 			tcp::endpoint endpoint,
 			logger_t in_logger,
 			std::uint32_t expire_time,
-			concurrency::task_channels<task>& task_dest);
+			concurrency::task_channels<task, true>& task_dest);
 
 		std::shared_ptr<http_utils::server::session> make_session(tcp::socket&& socket) override;
 	};

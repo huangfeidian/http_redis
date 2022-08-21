@@ -29,12 +29,12 @@ namespace spiritsaway::http_redis
 		const redis_config _config;
 		redisContext* ctx = nullptr;
 		logger_t logger;
-		concurrency::task_channels<task>& _task_source;
+		concurrency::task_channels<task, true>& _task_source;
 		task::channel_type pre_channel;
 		std::uint32_t worker_id = 0;
 		bool m_stopped = false;
 	public:
-		worker(const redis_config& config, concurrency::task_channels<task>& task_source, logger_t in_logger);
+		worker(const redis_config& config, concurrency::task_channels<task, true>& task_source, logger_t in_logger);
 		void run();
 		void set_executor_id(std::uint32_t executor_id);
 		void notify_stop();

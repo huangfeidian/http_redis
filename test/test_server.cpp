@@ -70,7 +70,7 @@ int main(int argc, const char** argv)
 	cur_redis_config.timeout = std::max(1u, expire_time / 2);
 	auto listen_address = net::ip::make_address(listen_host);
 	net::io_context ioc{ static_cast<int>(io_worker_num) };
-	concurrency::task_channels<http_redis::task> task_queue;
+	concurrency::task_channels<http_redis::task, true> task_queue;
 	auto cur_logger = create_logger("redis_http_server");
 	auto cur_listener = std::make_shared<http_redis::redis_listener>(ioc, 
 		tcp::endpoint(listen_address, listen_port), cur_logger, expire_time, task_queue);
