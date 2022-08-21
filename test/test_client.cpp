@@ -50,8 +50,8 @@ std::vector<std::string> create_string_cmds()
 {
 	std::vector<std::string> result;
 	result.push_back(http_redis::command::key::set("a", "a_1", 100 * 1000));
-	result.push_back(http_redis::command::key::set("a", "a_2", 100 * 1000, http_redis::command::set_mode::nx));
-	result.push_back(http_redis::command::key::set("a", "a_3", 0, http_redis::command::set_mode::nx));
+	result.push_back(http_redis::command::key::set("a", "a_2", 100 * 1000, http_redis::command::set_mode::set_nx));
+	result.push_back(http_redis::command::key::set("a", "a_3", 0, http_redis::command::set_mode::set_nx));
 	std::unordered_map<std::string, std::string> data_1 = {
 		{"a", "a_m"},
 		{"b", "b_m"},
