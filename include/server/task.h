@@ -23,13 +23,13 @@ namespace spiritsaway::http_redis
 	protected:
 		channel_type _channel;
 		std::vector<std::string> _cmds;
-		std::weak_ptr<callback_t> _callback;
+		callback_t _callback;
 		std::string _request_id;
 	public:
 		task(const channel_type in_channel,
 			const std::vector<std::string>& in_cmds,
 			const std::string& in_request_id,
-			std::weak_ptr<callback_t> in_callback)
+			callback_t in_callback)
 			: _channel(in_channel)
 			, _cmds(in_cmds)
 			, _request_id(in_request_id)
@@ -53,11 +53,9 @@ namespace spiritsaway::http_redis
 		}
 		void finish(const std::vector<reply>& replys)
 		{
-			auto cur_callback = _callback.lock();
-			_callback.reset();
-			if (cur_callback)
+			if (_callback)
 			{
-				cur_callback->operator()(replys);
+				_callback(replys);
 			}
 
 		}

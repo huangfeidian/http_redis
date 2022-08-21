@@ -79,14 +79,19 @@ std::string redis_session::check_request()
 void redis_session::route_request()
 {
 	logger->debug("redis_session accept new request {} body {}", request_id, req_.body());
-
 	auto self = std::dynamic_pointer_cast<redis_session>(shared_from_this());
+	auto self_weak = shared_from_this()->weak_from_this();
 	auto cur_task_lambda = [=](const std::vector<reply>& replys)
 	{
-		return self->finish_task(replys);
+		auto other_self = self_weak.lock();
+		if(other_self)
+		{
+			return std::dynamic_pointer_cast<redis_session>(other_self)->finish_task(replys);
+		}
+		
 	};
-	callback = std::make_shared<task::callback_t>(cur_task_lambda);
-	auto cur_task = std::make_shared<task>(channel, redis_cmds, request_id, callback);
+	
+	auto cur_task = std::make_shared<task>(channel, redis_cmds, request_id, cur_task_lambda);
 	beast::get_lowest_layer(stream_).expires_after(
 		std::chrono::seconds(expire_time));
 	expire_timer = std::make_shared<boost::asio::steady_timer>(stream_.get_executor(), std::chrono::seconds(expire_time / 2));
