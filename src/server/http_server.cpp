@@ -12,7 +12,7 @@ redis_session::redis_session(tcp::socket&& socket,
 	std::uint32_t in_expire_time,
 	concurrency::task_channels<task, true>& in_task_dest)
 	: http_utils::server::session(std::move(socket), std::move(in_logger), in_expire_time)
-	, _task_dest(in_task_dest)
+	, m_task_dest(in_task_dest)
 {
 
 }
@@ -33,52 +33,20 @@ std::string redis_session::check_request()
 		return "body must be json";
 	}
 	auto json_body = json::parse(req_.body());
-	if (!json_body.is_object())
+	try
 	{
-		return "body must be json object";
-
+		json_body.get_to(m_task_desc);
 	}
-	std::vector<std::string> str_values;
-	str_values.reserve(2);
-	std::vector<std::string> keys = { "request_id", "channel" };
-	for (const auto& one_key : keys)
+	catch (std::exception& e)
 	{
-		auto cur_iter = json_body.find(one_key);
-		if (cur_iter == json_body.end())
-		{
-			return "cant find value for " + one_key;
-		}
-		if (!cur_iter->is_string())
-		{
-			return "value for key " + one_key + " is not string";
-		}
-		str_values.push_back(cur_iter->get<std::string>());
-
-	}
-	request_id = str_values[0];
-	channel = str_values[1];
-	auto cmds_iter = json_body.find("redis_cmds");
-	if (cmds_iter == json_body.end())
-	{
-		return "cant find value for key redis_cmds";
-	}
-	if (!cmds_iter->is_array())
-	{
-		return "value for key redis_cmds is not array";
-	}
-	for (const auto& one_value : *cmds_iter)
-	{
-		if (!one_value.is_string())
-		{
-			return "values in redis_cmd array must be string";
-		}
-		redis_cmds.push_back(one_value.get<std::string>());
+		logger->info("cant parse task_desc with data {} error is {}", req_.body(), e.what());
+		return "task_desc parse fail";
 	}
 	return "";
 }
 void redis_session::route_request()
 {
-	logger->debug("redis_session accept new request {} body {}", request_id, req_.body());
+	logger->debug("redis_session accept  body {}", req_.body());
 	auto self = std::dynamic_pointer_cast<redis_session>(shared_from_this());
 	auto self_weak = shared_from_this()->weak_from_this();
 	auto cur_task_lambda = [=](const std::vector<reply>& replys)
@@ -91,14 +59,14 @@ void redis_session::route_request()
 		
 	};
 	
-	auto cur_task = std::make_shared<task>(channel, redis_cmds, request_id, cur_task_lambda);
+	auto cur_task = std::make_shared<task>(m_task_desc, cur_task_lambda);
 	beast::get_lowest_layer(stream_).expires_after(
 		std::chrono::seconds(expire_time));
 	expire_timer = std::make_shared<boost::asio::steady_timer>(stream_.get_executor(), std::chrono::seconds(expire_time / 2));
 	expire_timer->async_wait([self](const boost::system::error_code& e) {
 		self->on_timeout(e);
 	});
-	_task_dest.add_task(cur_task);
+	m_task_dest.add_task(cur_task);
 
 }
 void redis_session::on_timeout(const boost::system::error_code& e)
@@ -154,7 +122,6 @@ void redis_session::finish_task(const std::vector<reply>& replys)
 		array_result.push_back(one_result);
 	}
 	json final_result = json(array_result);
-	logger->debug("finish task {}", request_id);
 	http::response<http::string_body> res{ http::status::ok, req_.version() };
 	res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
 	res.set(http::field::content_type, "text/html");
@@ -170,12 +137,12 @@ redis_listener::redis_listener(net::io_context& ioc,
 	std::uint32_t expire_time,
 	concurrency::task_channels<task, true>& task_dest)
 	: http_utils::server::listener(ioc, std::move(endpoint), std::move(in_logger), expire_time)
-	, _task_dest(task_dest)
+	, m_task_dest(task_dest)
 {
 
 }
 
 std::shared_ptr<http_utils::server::session> redis_listener::make_session(tcp::socket&& socket)
 {
-	return std::make_shared<redis_session>(std::move(socket), logger, expire_time, _task_dest);
+	return std::make_shared<redis_session>(std::move(socket), logger, expire_time, m_task_dest);
 }

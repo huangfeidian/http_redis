@@ -78,7 +78,7 @@ int main(int argc, const char** argv)
 	std::vector<std::thread> io_worker_threads;
 	std::vector<std::thread> task_worker_threads;
 	std::vector<std::shared_ptr<http_redis::worker>> task_workers;
-	for (int i = 0; i < task_worker_num; i++)
+	for (std::uint32_t i = 0; i < task_worker_num; i++)
 	{
 		auto cur_task_worker = std::make_shared<http_redis::worker>(cur_redis_config, task_queue, cur_logger);
 		task_workers.push_back(cur_task_worker);
@@ -87,7 +87,7 @@ int main(int argc, const char** argv)
 			cur_task_worker->run();
 		});
 	}
-	for (int i = 0; i + 1 < io_worker_num; i++)
+	for (std::uint32_t i = 0; i + 1 < io_worker_num; i++)
 	{
 		io_worker_threads.emplace_back([&ioc]()
 		{

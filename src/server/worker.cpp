@@ -16,7 +16,7 @@ worker::worker(const redis_config& config,
 }
 void worker::run()
 {
-	while (true)
+	while (!m_stopped)
 	{
 		init_ctx();
 		poll();
@@ -80,7 +80,7 @@ bool worker::auth()
 }
 void worker::poll()
 {
-	while (true)
+	while (!m_stopped)
 	{
 		auto cur_task = _task_source.poll_one_task(pre_channel, worker_id);
 		if (!cur_task)
@@ -96,15 +96,15 @@ void worker::poll()
 			}
 			continue;
 		}
-		logger->debug("get task {}", cur_task->request_id());
+		logger->debug("get task {}", json(cur_task->desc().cmds));
 		pre_channel = cur_task->channel_id();
-		for (auto one_cmd : cur_task->cmds())
+		for (auto one_cmd : cur_task->desc().cmds)
 		{
 			redisAppendCommand(ctx, one_cmd.c_str());
 		}
 		redisReply *raw_reply;
 		std::vector<reply> result;
-		for(int i = 0; i < cur_task->cmds().size(); i++)
+		for(int i = 0; i < cur_task->desc().cmds.size(); i++)
 		{
 			raw_reply = nullptr;
 			redisGetReply(ctx, reinterpret_cast<void**>(&raw_reply));
@@ -177,6 +177,10 @@ void worker::init_ctx()
 			reconnect_gap = 5000;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(reconnect_gap));
+		if (m_stopped)
+		{
+			break;
+		}
 		if (!connect())
 		{
 			continue;

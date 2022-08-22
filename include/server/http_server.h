@@ -21,10 +21,8 @@ namespace spiritsaway::http_redis
 
 	class redis_session: public http_utils::server::session
 	{
-		concurrency::task_channels<task, true>& _task_dest;
-		std::string request_id;
-		std::vector<std::string> redis_cmds;
-		std::string channel;
+		concurrency::task_channels<task, true>& m_task_dest;
+		task_desc m_task_desc;
 		std::string check_request() override;
 		void route_request() override;
 		void finish_task(const std::vector<reply>& replys);
@@ -43,7 +41,7 @@ namespace spiritsaway::http_redis
 	class redis_listener : public http_utils::server::listener
 	{
 	protected:
-		concurrency::task_channels<task, true>& _task_dest;
+		concurrency::task_channels<task, true>& m_task_dest;
 
 	public:
 		redis_listener(net::io_context& ioc,
