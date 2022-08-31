@@ -58,7 +58,7 @@ file(GLOB_RECURSE COMMAND_SRC_FILES "${PROJECT_SOURCE_DIR}/src/command/*.cpp")
 file(GLOB_RECURSE SERVER_SRC_FILES "${PROJECT_SOURCE_DIR}/src/server/*.cpp")
 
 add_library(http_redis_command ${COMMAND_SRC_FILES})
-
+target_link_libraries(http_redis_command PUBLIC nlohmann_json::nlohmann_json)
 add_library(http_redis_server ${SERVER_SRC_FILES})
 target_link_libraries(http_redis_server PUBLIC http_utils nlohmann_json::nlohmann_json task_channel hiredis::hiredis)
 

@@ -40,7 +40,7 @@ int main(int argc, const char** argv)
 
 	std::string listen_host = "0.0.0.0";
 	std::uint16_t listen_port = 8080;
-	std::string redis_host = "192.168.1.160";
+	std::string redis_host = "192.168.1.110";
 	std::uint16_t redis_port = 6379;
 
 	std::string passwd = "";
