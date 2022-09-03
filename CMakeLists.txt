@@ -55,11 +55,14 @@ add_definitions (-DBOOST_ASIO_DISABLE_BOOST_REGEX=1)
 
 
 file(GLOB_RECURSE COMMAND_SRC_FILES "${PROJECT_SOURCE_DIR}/src/command/*.cpp")
+file(GLOB_RECURSE WORKER_SRC_FILES "${PROJECT_SOURCE_DIR}/src/worker/*.cpp")
 file(GLOB_RECURSE SERVER_SRC_FILES "${PROJECT_SOURCE_DIR}/src/server/*.cpp")
 
 add_library(http_redis_command ${COMMAND_SRC_FILES})
+add_library(http_redis_worker ${WORKER_SRC_FILES})
 add_library(http_redis_server ${SERVER_SRC_FILES})
-target_link_libraries(http_redis_server PUBLIC http_utils nlohmann_json::nlohmann_json task_channel hiredis::hiredis)
+target_link_libraries(http_redis_worker PUBLIC nlohmann_json::nlohmann_json task_channel hiredis::hiredis spdlog::spdlog)
+target_link_libraries(http_redis_server PUBLIC http_utils http_redis_worker)
 
 add_executable(server_test ${PROJECT_SOURCE_DIR}/test/test_server.cpp)
 target_link_libraries(server_test http_redis_server)
@@ -75,7 +78,7 @@ foreach(p LIB BIN INCLUDE)
 	endif()
 endforeach()
 
-export(TARGETS http_redis_command http_redis_server 
+export(TARGETS http_redis_command http_redis_worker http_redis_server 
      FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Targets.cmake)
 
 file(WRITE
@@ -86,7 +89,7 @@ install(FILES
         ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
 
-install(TARGETS http_redis_command http_redis_server EXPORT ${PROJECT_NAME}Targets
+install(TARGETS http_redis_command http_redis_worker http_redis_server EXPORT ${PROJECT_NAME}Targets
    ARCHIVE  DESTINATION lib
    LIBRARY DESTINATION lib
    RUNTIME DESTINATION bin

@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "task.h"
+#include "worker/task.h"
 
-#include "worker.h"
+#include "worker/worker.h"
 
 #include <http_utils/http_server.h>
 
