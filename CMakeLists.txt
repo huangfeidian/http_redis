@@ -38,19 +38,7 @@ link_directories(${OPENSSL_LIBRARY_DIR})
 
 find_package(Threads REQUIRED)
 
-find_package (
-  Boost 1.71 REQUIRED COMPONENTS
-	system
-	thread
-	
-	)
-include_directories (${Boost_INCLUDE_DIRS})
-link_directories (${Boost_LIBRARY_DIRS})
-add_definitions (-DBOOST_ASIO_NO_DEPRECATED=1)
-add_definitions (-DBOOST_ASIO_DISABLE_BOOST_ARRAY=1)
-add_definitions (-DBOOST_ASIO_DISABLE_BOOST_BIND=1)
-add_definitions (-DBOOST_ASIO_DISABLE_BOOST_DATE_TIME=1)
-add_definitions (-DBOOST_ASIO_DISABLE_BOOST_REGEX=1)
+
 
 
 
@@ -58,17 +46,17 @@ file(GLOB_RECURSE COMMAND_SRC_FILES "${PROJECT_SOURCE_DIR}/src/command/*.cpp")
 file(GLOB_RECURSE WORKER_SRC_FILES "${PROJECT_SOURCE_DIR}/src/worker/*.cpp")
 file(GLOB_RECURSE SERVER_SRC_FILES "${PROJECT_SOURCE_DIR}/src/server/*.cpp")
 
-add_library(http_redis_command ${COMMAND_SRC_FILES})
-add_library(http_redis_worker ${WORKER_SRC_FILES})
-add_library(http_redis_server ${SERVER_SRC_FILES})
-target_link_libraries(http_redis_worker PUBLIC nlohmann_json::nlohmann_json task_channel hiredis::hiredis spdlog::spdlog)
-target_link_libraries(http_redis_server PUBLIC http_utils http_redis_worker)
+add_library(redis_command ${COMMAND_SRC_FILES})
+add_library(redis_worker ${WORKER_SRC_FILES})
+add_library(redis_server ${SERVER_SRC_FILES})
+target_link_libraries(redis_worker PUBLIC nlohmann_json::nlohmann_json task_channel hiredis::hiredis spdlog::spdlog)
+target_link_libraries(redis_server PUBLIC  http_utils::http_server redis_worker)
 
 add_executable(server_test ${PROJECT_SOURCE_DIR}/test/test_server.cpp)
-target_link_libraries(server_test http_redis_server)
+target_link_libraries(server_test redis_server)
 
 add_executable(client_test ${PROJECT_SOURCE_DIR}/test/test_client.cpp)
-target_link_libraries(client_test http_utils nlohmann_json::nlohmann_json http_redis_command)
+target_link_libraries(client_test http_utils::http_client nlohmann_json::nlohmann_json redis_command)
 
 foreach(p LIB BIN INCLUDE)
 	set(var CMAKE_INSTALL_${p}DIR)
@@ -78,7 +66,7 @@ foreach(p LIB BIN INCLUDE)
 	endif()
 endforeach()
 
-export(TARGETS http_redis_command http_redis_worker http_redis_server 
+export(TARGETS redis_command redis_worker redis_server 
      FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Targets.cmake)
 
 file(WRITE
@@ -89,7 +77,7 @@ install(FILES
         ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
 
-install(TARGETS http_redis_command http_redis_worker http_redis_server EXPORT ${PROJECT_NAME}Targets
+install(TARGETS redis_command redis_worker redis_server EXPORT ${PROJECT_NAME}Targets
    ARCHIVE  DESTINATION lib
    LIBRARY DESTINATION lib
    RUNTIME DESTINATION bin

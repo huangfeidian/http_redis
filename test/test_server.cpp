@@ -1,14 +1,11 @@
-﻿#include <server/http_server.h>
+﻿#include "server/server.h"
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/fmt/ostr.h>
 
 using namespace spiritsaway;
 using namespace http_utils;
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
-namespace net = boost::asio;            // from <boost/asio.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+
 
 std::shared_ptr<spdlog::logger> create_logger(const std::string& name)
 {
@@ -68,13 +65,11 @@ int main(int argc, const char** argv)
 	cur_redis_config.port = redis_port;
 	cur_redis_config.passwd = passwd;
 	cur_redis_config.timeout = std::max(1u, expire_time / 2);
-	auto listen_address = net::ip::make_address(listen_host);
-	net::io_context ioc{ static_cast<int>(io_worker_num) };
-	concurrency::task_channels<http_redis::task, true> task_queue;
+	asio::io_context ioc{ static_cast<int>(io_worker_num) };
+	spiritsaway::concurrency::task_channels<http_redis::task, true> task_queue;
 	auto cur_logger = create_logger("redis_http_server");
-	auto cur_listener = std::make_shared<http_redis::redis_listener>(ioc, 
-		tcp::endpoint(listen_address, listen_port), cur_logger, expire_time, task_queue);
-	cur_listener->run();
+	auto cur_server = http_redis::redis_server(ioc, cur_logger, listen_host, std::to_string(listen_port), task_queue);
+	cur_server.run();
 	std::vector<std::thread> io_worker_threads;
 	std::vector<std::thread> task_worker_threads;
 	std::vector<std::shared_ptr<http_redis::worker>> task_workers;
