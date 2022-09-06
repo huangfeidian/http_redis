@@ -55,8 +55,6 @@ target_link_libraries(redis_server PUBLIC  http_utils::http_server redis_worker)
 add_executable(server_test ${PROJECT_SOURCE_DIR}/test/test_server.cpp)
 target_link_libraries(server_test redis_server)
 
-add_executable(client_test ${PROJECT_SOURCE_DIR}/test/test_client.cpp)
-target_link_libraries(client_test http_utils::http_client nlohmann_json::nlohmann_json redis_command)
 
 foreach(p LIB BIN INCLUDE)
 	set(var CMAKE_INSTALL_${p}DIR)
