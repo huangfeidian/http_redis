@@ -96,7 +96,7 @@ void worker::poll()
 			}
 			continue;
 		}
-		logger->debug("get task {}", json(cur_task->desc().cmds));
+		logger->debug("get task {}", json(cur_task->desc().cmds).dump());
 		pre_channel = cur_task->channel_id();
 		for (auto one_cmd : cur_task->desc().cmds)
 		{
