@@ -11,7 +11,7 @@ using json = nlohmann::json;
 std::string redis_server::check_request(const http_utils::request& cur_req, task_desc& cur_task_desc) const
 {
 
-	if (!cur_req.uri.find("/redis/post/") != 0)
+	if (cur_req.uri.find("/redis/post/") != 0)
 	{
 		return "request target must start with /redis/post/";
 	}
