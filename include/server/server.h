@@ -11,7 +11,7 @@
 namespace spiritsaway::http_redis
 {
 
-
+	namespace asio = boost::asio;
 	class redis_server : public http_utils::http_server
 	{
 	public:
