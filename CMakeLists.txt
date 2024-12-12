@@ -38,7 +38,7 @@ link_directories(${OPENSSL_LIBRARY_DIR})
 
 find_package(Threads REQUIRED)
 
-
+find_package(Boost 1.71.0 REQUIRED COMPONENTS  system date_time)
 
 
 
