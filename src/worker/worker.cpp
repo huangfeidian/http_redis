@@ -8,8 +8,8 @@ using namespace spiritsaway::http_redis;
 worker::worker(const redis_config& config, 
 	concurrency::task_channels<task, true>& task_source, 
 	logger_t in_logger)
-	: _config(config)
-	, _task_source(task_source)
+	: m_config(config)
+	, m_task_source(task_source)
 	, logger(in_logger)
 {
 
@@ -34,18 +34,18 @@ bool worker::connect()
 		ctx = nullptr;
 	}
 	struct timeval timeoutVal;
-	timeoutVal.tv_sec = _config.timeout;
+	timeoutVal.tv_sec = m_config.timeout;
 	timeoutVal.tv_usec = 0;
-	logger->info("begin connect to {}:{} with timeout {}", _config.host, _config.port, _config.timeout);
-	ctx = redisConnectWithTimeout(_config.host.c_str(), _config.port, timeoutVal);
+	logger->info("begin connect to {}:{} with timeout {}", m_config.host, m_config.port, m_config.timeout);
+	ctx = redisConnectWithTimeout(m_config.host.c_str(), m_config.port, timeoutVal);
 	if (ctx == nullptr)
 	{
-		logger->error("fail to connect to {}:{}", _config.host, _config.port);
+		logger->error("fail to connect to {}:{}", m_config.host, m_config.port);
 		return false;
 	}
 	if (ctx->err)
 	{
-		logger->error("fail to connect to {}:{} error is {}", _config.host, _config.port, ctx->err);
+		logger->error("fail to connect to {}:{} error is {}", m_config.host, m_config.port, ctx->err);
 		redisFree(ctx);
 		ctx = nullptr;
 		return false;
@@ -56,12 +56,12 @@ bool worker::connect()
 
 bool worker::auth()
 {
-	if (_config.passwd.empty())
+	if (m_config.passwd.empty())
 	{
 		logger->info("no passwd provided to auth");
 		return true;
 	}
-	redisReply *reply = static_cast<redisReply *>(redisCommand(ctx, "AUTH %s", _config.passwd.c_str()));
+	redisReply *reply = static_cast<redisReply *>(redisCommand(ctx, "AUTH %s", m_config.passwd.c_str()));
 	if (!reply)
 	{
 		logger->error("auth fail: empty reply");
@@ -82,7 +82,7 @@ void worker::poll()
 {
 	while (!m_stopped)
 	{
-		auto cur_task = _task_source.poll_one_task(pre_channel, worker_id);
+		auto cur_task = m_task_source.poll_one_task(pre_channel, worker_id);
 		if (!cur_task)
 		{
 			if(m_stopped)
@@ -104,7 +104,7 @@ void worker::poll()
 		}
 		redisReply *raw_reply;
 		std::vector<reply> result;
-		for(int i = 0; i < cur_task->desc().cmds.size(); i++)
+		for(std::uint32_t i = 0; i < cur_task->desc().cmds.size(); i++)
 		{
 			raw_reply = nullptr;
 			redisGetReply(ctx, reinterpret_cast<void**>(&raw_reply));
@@ -120,7 +120,7 @@ void worker::poll()
 			}
 		}
 		cur_task->finish(result);
-		_task_source.finish_task(cur_task);
+		m_task_source.finish_task(cur_task);
 
 	}
 }
@@ -161,7 +161,7 @@ bool worker::ping()
 
 	if (!ping_ret)
 	{
-		logger->info("ping {}:{} with fail error {}", _config.host, _config.port, error);
+		logger->info("ping {}:{} with fail error {}", m_config.host, m_config.port, error);
 	}
 	return ping_ret;
 }
